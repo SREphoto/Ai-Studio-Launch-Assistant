@@ -15,7 +15,8 @@ import {
     ApplicationState
 } from "./state";
 import { generateLaunchPlan, breakDownStep, getInCardChatResponse } from "./api";
-import { updateView } from "./ui";
+import { showToast } from "./ui";
+import { eventBus } from "./eventBus";
 import { generateUniqueId } from "./utils";
 
 export function handleProjectDescriptionSubmit(event: Event) {
@@ -23,7 +24,7 @@ export function handleProjectDescriptionSubmit(event: Event) {
     const { ai } = getState();
     if (!ai) {
         setGlobalAiError("AI client is not initialized. Please ensure API_KEY is set correctly.");
-        updateView();
+        eventBus.emit('state-changed');
         return;
     }
 
@@ -33,13 +34,14 @@ export function handleProjectDescriptionSubmit(event: Event) {
 
     if (!description) {
         setGlobalAiError("Please describe your project.");
-        updateView();
+        eventBus.emit('state-changed');
         return;
     }
 
     setIsLoadingAiResponse(true);
     setGlobalAiError(null);
-    updateView();
+    getState().planGenerated = true;
+    eventBus.emit('state-changed');
 
     generateLaunchPlan(description)
         .then(generatedData => {
@@ -84,7 +86,7 @@ export function handleProjectDescriptionSubmit(event: Event) {
         })
         .finally(() => {
             setIsLoadingAiResponse(false);
-            updateView();
+            eventBus.emit('state-changed');
         });
 }
 
@@ -97,7 +99,7 @@ export async function handleBreakDownStep(cardId: string) {
 
     card.isBreakingDown = true;
     card.breakdownError = null;
-    updateView();
+    eventBus.emit('state-changed');
 
     try {
         const parsedSubSteps = await breakDownStep(card);
@@ -113,7 +115,7 @@ export async function handleBreakDownStep(cardId: string) {
         card.subSteps = [];
     } finally {
         card.isBreakingDown = false;
-        updateView();
+        eventBus.emit('state-changed');
     }
 }
 
@@ -134,7 +136,7 @@ export async function handleInCardChatSubmit(cardId: string, userQuery: string) 
     });
     card.currentChatQuery = '';
 
-    updateView();
+    eventBus.emit('state-changed');
 
     try {
         const responseText = await getInCardChatResponse(card, userQuery);
@@ -155,7 +157,7 @@ export async function handleInCardChatSubmit(cardId: string, userQuery: string) 
         });
     } finally {
         card.isChatLoading = false;
-        updateView();
+        eventBus.emit('state-changed');
     }
 }
 
@@ -176,6 +178,7 @@ export function handleToggleComplete(event: Event) {
 
     if (isMarkingDone) {
         cardToUpdate.completed = true;
+        showToast(`Step "${cardToUpdate.title}" marked as done.`);
         if (originalSourceList === detailedCards) {
             setDetailedCards(detailedCards.filter(c => c.id !== cardId));
             if (!completedDetailedCards.find(c => c.id === cardId)) {
@@ -235,6 +238,7 @@ export function handleToggleComplete(event: Event) {
         }
     } else { // Marking as pending
         cardToUpdate.completed = false;
+        showToast(`Step "${cardToUpdate.title}" marked as pending.`);
         if (originalSourceList === completedDetailedCards) {
             setCompletedDetailedCards(completedDetailedCards.filter(c => c.id !== cardId));
             if (!detailedCards.find(c => c.id === cardId)) {
@@ -295,7 +299,7 @@ export function handleToggleComplete(event: Event) {
         if (!cardToUpdate.completed) roadmapStepToUpdate.isArchived = false;
     }
 
-    updateView();
+    eventBus.emit('state-changed');
 }
 
 export function handleSubStepToggle(event: Event) {
@@ -311,7 +315,7 @@ export function handleSubStepToggle(event: Event) {
                 subStep.completed = checkbox.checked;
             }
         }
-        updateView();
+        eventBus.emit('state-changed');
     }
 }
 
@@ -357,14 +361,15 @@ export function handleUploadPlan(event: Event) {
                 if (loadedState && loadedState.roadmapSteps && loadedState.detailedCards) {
                     loadAppState(loadedState);
                     setGlobalAiError(null);
-                    updateView();
+                    eventBus.emit('state-changed');
+                    showToast("Plan loaded successfully!");
                 } else {
                     throw new Error("Invalid plan file format. Missing core properties.");
                 }
             } catch (error) {
                 console.error("Error loading plan:", error);
                 setGlobalAiError(`Failed to load plan: ${error.message}. Ensure it's a valid JSON file.`);
-                updateView();
+                eventBus.emit('state-changed');
             }
         };
         reader.readAsText(file);
@@ -393,7 +398,7 @@ export function handleDecisionCardHeaderClick(event: Event) {
                 toggleIcon.innerHTML = card.isExpanded ? '▼' : '▶';
             }
             if (card.isExpanded && detailedCards.includes(card)) {
-                 updateView();
+                 eventBus.emit('state-changed');
             }
         }
     }
@@ -478,7 +483,7 @@ function miniCardClickHandler(this: HTMLElement) {
                     if (header) header.setAttribute('aria-expanded', 'true');
                     if (contentWrapper) contentWrapper.classList.remove('collapsed');
                     if (toggleIcon) toggleIcon.innerHTML = '▼';
-                    updateView();
+                    eventBus.emit('state-changed');
                 }
             }
         } else {

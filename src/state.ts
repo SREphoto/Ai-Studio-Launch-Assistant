@@ -57,6 +57,7 @@ export interface ApplicationState {
 // --- State Variables ---
 
 const state = {
+    planGenerated: false,
     currentView: 'launchpad' as AppView,
     currentProjectDescription: "",
     roadmapSteps: [] as RoadmapStep[],
@@ -112,6 +113,10 @@ export function loadAppState(loadedState: ApplicationState) {
 
 
 export const getState = () => state;
+
+export function setPlanGenerated(generated: boolean) {
+    state.planGenerated = generated;
+}
 
 export function setCurrentView(view: AppView) {
     state.currentView = view;

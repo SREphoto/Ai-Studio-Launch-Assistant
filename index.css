@@ -647,33 +647,66 @@ main#app-container {
 }
 .in-card-chat-form button.ask-ai-btn:hover { background-color: #117a8b; }
 
-.card-loading.small-spinner {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    padding: 10px;
-    font-size: 0.9em;
-    color: var(--color-secondary);
+.card-loading.three-dots-spinner {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 20px;
 }
-.card-loading.small-spinner::before { 
-    content: '';
-    display: inline-block;
-    width: 16px;
-    height: 16px;
-    border: 2px solid currentColor;
-    border-top-color: transparent;
-    border-radius: 50%;
-    animation: spin 0.6s linear infinite;
-    margin-right: 8px;
+
+.three-dots-spinner .dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background-color: var(--color-primary);
+  animation: bounce 1.4s infinite ease-in-out both;
+  margin: 0 4px;
+}
+
+.three-dots-spinner .dot:nth-child(1) {
+  animation-delay: -0.32s;
+}
+
+.three-dots-spinner .dot:nth-child(2) {
+  animation-delay: -0.16s;
+}
+
+@keyframes bounce {
+  0%, 80%, 100% {
+    transform: scale(0);
+  }
+  40% {
+    transform: scale(1.0);
+  }
 }
 .error-message { /* Global error message styling */
     color: var(--color-danger);
     background-color: #f8d7da;
     border: 1px solid #f5c6cb;
-    padding: 10px 15px;
-    border-radius: 4px;
+    padding: 15px;
+    border-radius: 6px;
     font-size: 1em;
-    margin-top: 15px;
+    margin-top: 20px;
+    display: flex;
+    flex-direction: column;
+}
+
+.error-message-header {
+    display: flex;
+    align-items: center;
+    font-weight: 600;
+    margin-bottom: 10px;
+}
+
+.error-message-header .error-icon {
+    width: 20px;
+    height: 20px;
+    margin-right: 10px;
+}
+
+.error-message p {
+    margin: 0;
+    padding-left: 30px; /* Align with text after icon */
 }
 .error-message.internal-error { /* Specific for in-card errors */
     font-size: 0.9em;
@@ -761,12 +794,36 @@ main#app-container {
     border-bottom: 2px solid var(--color-primary); 
     padding-bottom: 10px;
 }
-.empty-state-message {
+.empty-state {
     text-align: center;
+    padding: 40px 20px;
+    border: 2px dashed var(--card-border-default);
+    border-radius: 8px;
+    margin: 20px;
     color: var(--color-secondary);
-    padding: 20px;
-    font-style: italic;
-    font-size: 0.95em;
+}
+
+.empty-state-icon {
+    margin-bottom: 15px;
+}
+
+.empty-state-icon svg {
+    width: 48px;
+    height: 48px;
+    stroke-width: 1.5;
+    color: var(--color-info);
+}
+
+.empty-state-title {
+    font-size: 1.4em;
+    font-weight: 600;
+    color: var(--color-dark);
+    margin: 0 0 10px 0;
+}
+
+.empty-state-message {
+    font-size: 1em;
+    font-style: normal;
 }
 
 
@@ -956,4 +1013,25 @@ main#app-container {
     .launchpad-layout {
         flex-direction: row; 
     }
+}
+
+/* Toast Notification Styles */
+.toast-notification {
+    position: fixed;
+    bottom: 20px;
+    left: 50%;
+    transform: translateX(-50%) translateY(100px);
+    background-color: var(--color-dark);
+    color: var(--color-light);
+    padding: 12px 20px;
+    border-radius: 25px;
+    font-size: 0.9em;
+    z-index: 1001;
+    opacity: 0;
+    transition: transform 0.5s ease, opacity 0.5s ease;
+}
+
+.toast-notification.show {
+    transform: translateX(-50%) translateY(0);
+    opacity: 1;
 }

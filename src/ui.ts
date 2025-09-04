@@ -1,7 +1,6 @@
 import { marked } from "marked";
 import { DetailedCardData, findCardGlobally, getState, RoadmapStep } from "./state";
 import { sanitizeHtml } from "./utils";
-import { attachAllEventListeners } from "./events";
 
 // --- DOM Elements ---
 export const appContainer = document.getElementById('app-container') as HTMLElement;
@@ -36,31 +35,43 @@ export function renderLaunchpad() {
                             <input type="file" id="upload-plan-input" accept=".json" class="sr-only">
                         </div>
                     </form>
-                    <div id="global-ai-error-message" class="error-message" style="display: ${globalAiError ? 'block' : 'none'};" role="alert" aria-live="assertive">${globalAiError || ''}</div>
+                    <div id="global-ai-error-message" class="error-message" style="display: ${globalAiError ? 'block' : 'none'};" role="alert" aria-live="assertive">
+                        <div class="error-message-header">
+                            <svg class="error-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" width="24" height="24">
+                                <path d="M1 21h22L12 2 1 21zm12-3h-2v-2h2v2zm0-4h-2v-4h2v4z"/>
+                            </svg>
+                            <strong>Error</strong>
+                        </div>
+                        <p>${globalAiError || ''}</p>
+                    </div>
                 </section>
 
-                <section class="launchpad-section" id="roadmap-section" aria-labelledby="roadmap-heading" style="display: ${roadmapSteps.length > 0 ? 'block' : 'none'};">
+                <section class="launchpad-section" id="roadmap-section" aria-labelledby="roadmap-heading" style="display: ${getState().planGenerated ? 'block' : 'none'};">
                     <h2 id="roadmap-heading">2. Your AI-Generated Launch Roadmap</h2>
                     <div id="roadmap-overview" role="navigation" aria-label="Roadmap steps">
                         ${renderRoadmapOverview()}
                     </div>
                 </section>
 
-                <section class="launchpad-section" id="detailed-steps-section" aria-labelledby="detailed-steps-heading" style="display: ${detailedCards.length > 0 || completedDetailedCards.length > 0 || archivedCards.length > 0 ? 'block' : 'none'};">
+                <section class="launchpad-section" id="detailed-steps-section" aria-labelledby="detailed-steps-heading" style="display: ${getState().planGenerated ? 'block' : 'none'};">
                     <h2 id="detailed-steps-heading">3. Detailed Steps & Guidance</h2>
                     <div id="detailed-cards-container">
-                        ${detailedCards.length > 0 ? detailedCards.map(card => renderDetailedCard(card, 'active')).join('') : '<p class="empty-state-message">No active steps. Generate a plan or check completed/archived steps.</p>'}
+                        ${detailedCards.length > 0 ? detailedCards.map(card => renderDetailedCard(card, 'active')).join('') : renderEmptyState(
+                            "No Active Steps",
+                            "Generate a plan or check your completed and archived steps.",
+                            `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="8" y1="6" x2="21" y2="6"></line><line x1="8" y1="12" x2="21" y2="12"></line><line x1="8" y1="18" x2="21" y2="18"></line><line x1="3" y1="6" x2="3.01" y2="6"></line><line x1="3" y1="12" x2="3.01" y2="12"></line><line x1="3" y1="18" x2="3.01" y2="18"></line></svg>`
+                        )}
                     </div>
                 </section>
 
-                <section class="launchpad-section" id="completed-roadmap-section" aria-labelledby="completed-roadmap-heading" style="display: ${completedDetailedCards.length > 0 ? 'block' : 'none'};">
+                <section class="launchpad-section" id="completed-roadmap-section" aria-labelledby="completed-roadmap-heading" style="display: ${getState().planGenerated && completedDetailedCards.length > 0 ? 'block' : 'none'};">
                     <h2 id="completed-roadmap-heading">Completed Steps</h2>
                     <div id="completed-cards-container">
                         ${completedDetailedCards.map(card => renderDetailedCard(card, 'completed')).join('')}
                     </div>
                 </section>
 
-                <section class="launchpad-section" id="archived-items-section" aria-labelledby="archived-items-heading" style="display: ${archivedCards.length > 0 ? 'block' : 'none'};">
+                <section class="launchpad-section" id="archived-items-section" aria-labelledby="archived-items-heading" style="display: ${getState().planGenerated && archivedCards.length > 0 ? 'block' : 'none'};">
                     <h2 id="archived-items-heading">Archived Items</h2>
                     <div id="archived-cards-container">
                         ${archivedCards.map(card => renderDetailedCard(card, 'archived')).join('')}
@@ -83,7 +94,6 @@ export function renderLaunchpad() {
             </aside>
         </div>
     `;
-    attachAllEventListeners();
 
     if (globalAiError && !ai) {
         const generateBtn = document.getElementById('generate-plan-btn') as HTMLButtonElement;
@@ -154,7 +164,11 @@ export function renderRoadmapOverview(): string {
         }
     });
     if (html.trim() === '') {
-      return '<p class="empty-state-message">No roadmap steps to display. Generate or load a plan.</p>';
+        return renderEmptyState(
+            "No Roadmap Steps",
+            "Generate or load a plan to see your roadmap.",
+            `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="1 6 1 22 8 18 16 22 23 18 23 2 16 6 8 2 1 6"></polygon><line x1="8" y1="2" x2="8" y2="18"></line><line x1="16" y1="6" x2="16" y2="22"></line></svg>`
+        );
     }
     return html;
 }
@@ -246,8 +260,20 @@ export function renderDetailedCard(card: DetailedCardData, context: 'active' | '
 
                     ${context === 'active' && !isDecisionCard ? `
                     <div class="sub-steps-container" id="sub-steps-for-${card.id}">
-                        ${card.isBreakingDown ? '<div class="card-loading small-spinner">Breaking down step...</div>' : ''}
-                        ${card.breakdownError ? `<div class="error-message internal-error">${card.breakdownError} <button class="action-btn retry-breakdown-btn" data-card-id="${card.id}">Retry</button></div>` : ''}
+                        ${card.isBreakingDown ? `<div class="card-loading three-dots-spinner">
+                            <div class="dot"></div>
+                            <div class="dot"></div>
+                            <div class="dot"></div>
+                        </div>` : ''}
+                        ${card.breakdownError ? `<div class="error-message internal-error">
+                            <div class="error-message-header">
+                                <svg class="error-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" width="24" height="24">
+                                    <path d="M1 21h22L12 2 1 21zm12-3h-2v-2h2v2zm0-4h-2v-4h2v4z"/>
+                                </svg>
+                                <strong>Error</strong>
+                            </div>
+                            <p>${card.breakdownError} <button class="action-btn retry-breakdown-btn" data-card-id="${card.id}">Retry</button></p>
+                        </div>` : ''}
                         ${card.subSteps && card.subSteps.length > 0 ? `
                             <h4>Actionable Sub-steps:</h4>
                             <ul class="sub-step-list">
@@ -273,8 +299,20 @@ export function renderDetailedCard(card: DetailedCardData, context: 'active' | '
                                 </div>
                             `).join('')}
                         </div>
-                        ${card.isChatLoading ? '<div class="card-loading small-spinner">AI is thinking...</div>' : ''}
-                        ${card.chatError ? `<div class="error-message internal-error">${card.chatError}</div>` : ''}
+                        ${card.isChatLoading ? `<div class="card-loading three-dots-spinner">
+                            <div class="dot"></div>
+                            <div class="dot"></div>
+                            <div class="dot"></div>
+                        </div>` : ''}
+                        ${card.chatError ? `<div class="error-message internal-error">
+                            <div class="error-message-header">
+                                <svg class="error-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" width="24" height="24">
+                                    <path d="M1 21h22L12 2 1 21zm12-3h-2v-2h2v2zm0-4h-2v-4h2v4z"/>
+                                </svg>
+                                <strong>Error</strong>
+                            </div>
+                            <p>${card.chatError}</p>
+                        </div>` : ''}
                         <form class="in-card-chat-form" data-card-id="${card.id}">
                             <label for="chat-input-${card.id}" class="sr-only">Ask AI a question</label>
                             <textarea id="chat-input-${card.id}" class="chat-input" placeholder="Ask a question about this step..." rows="2" aria-label="Ask AI a question for step ${card.title}">${card.currentChatQuery || ''}</textarea>
@@ -346,7 +384,11 @@ export function renderDecisionsMadeSidebar(): string {
     });
     html += '</ul>';
     if (!hasDecisions) {
-        return '<p class="empty-state-message">No decisions made yet.</p>';
+        return renderEmptyState(
+            "No Decisions Made",
+            "As you complete decision steps, your choices will be summarized here.",
+            `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>`
+        );
     }
     return html;
 }
@@ -377,6 +419,16 @@ export function renderColorLegend(): string {
 }
 
 
+function renderEmptyState(title: string, message: string, svgIcon: string): string {
+    return `
+        <div class="empty-state">
+            <div class="empty-state-icon">${svgIcon}</div>
+            <h4 class="empty-state-title">${title}</h4>
+            <p class="empty-state-message">${message}</p>
+        </div>
+    `;
+}
+
 import { staticGuideData } from "./staticData";
 
 export function renderGuide() {
@@ -393,7 +445,6 @@ export function renderGuide() {
             `).join('')}
         </div>
     `;
-     attachAllEventListeners();
 }
 
 export function updateLoadingState(isLoading: boolean) {
@@ -405,6 +456,25 @@ export function updateLoadingState(isLoading: boolean) {
     if(generateBtn) {
         generateBtn.disabled = isLoading || !getState().ai;
     }
+}
+
+export function showToast(message: string, duration: number = 3000) {
+    const toast = document.createElement('div');
+    toast.className = 'toast-notification';
+    toast.textContent = message;
+
+    document.body.appendChild(toast);
+
+    setTimeout(() => {
+        toast.classList.add('show');
+    }, 100);
+
+    setTimeout(() => {
+        toast.classList.remove('show');
+        setTimeout(() => {
+            document.body.removeChild(toast);
+        }, 500);
+    }, duration);
 }
 
 export function updateView() {

@@ -1,6 +1,12 @@
 import { getState, initializeAi, setCurrentView } from "./state";
 import { updateView, navLaunchpad, navGuide, headerContent, appContainer, loadingOverlay } from "./ui";
-import { handleDownloadPlan } from "./events";
+import { handleDownloadPlan, attachAllEventListeners } from "./events";
+import { eventBus } from "./eventBus";
+
+function rerender() {
+    updateView();
+    attachAllEventListeners();
+}
 
 export function initializeApp() {
     if (!appContainer || !loadingOverlay || !navLaunchpad || !navGuide || !headerContent) {
@@ -9,11 +15,13 @@ export function initializeApp() {
         return;
     }
 
+    eventBus.on('state-changed', rerender);
+
     navLaunchpad.addEventListener('click', (e) => {
         e.preventDefault();
         if (getState().currentView !== 'launchpad') {
             setCurrentView('launchpad');
-            updateView();
+            rerender();
         }
     });
 
@@ -21,7 +29,7 @@ export function initializeApp() {
         e.preventDefault();
         if (getState().currentView !== 'guide') {
             setCurrentView('guide');
-            updateView();
+            rerender();
         }
     });
 
@@ -37,5 +45,5 @@ export function initializeApp() {
         headerContent.appendChild(downloadButton);
     }
 
-    updateView();
+    rerender();
 }
